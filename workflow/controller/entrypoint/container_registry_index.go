@@ -2,9 +2,11 @@ package entrypoint
 
 import (
 	"context"
+	"runtime"
 
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
+	gcrv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -27,7 +29,7 @@ func (i *containerRegistryIndex) Lookup(ctx context.Context, image string, optio
 	if err != nil {
 		return nil, err
 	}
-	img, err := remote.Image(ref, remote.WithAuthFromKeychain(kc))
+	img, err := remote.Image(ref, remote.WithAuthFromKeychain(kc), remote.WithPlatform(currentPlatform()))
 	if err != nil {
 		return nil, err
 	}
@@ -39,6 +41,14 @@ func (i *containerRegistryIndex) Lookup(ctx context.Context, image string, optio
 		Entrypoint: f.Config.Entrypoint,
 		Cmd:        f.Config.Cmd,
 	}, nil
+}
+
+func currentPlatform() gcrv1.Platform {
+	platform := gcrv1.Platform{
+		OS:           runtime.GOOS,
+		Architecture: runtime.GOARCH,
+	}
+	return platform
 }
 
 func imagePullSecretNames(secrets []v1.LocalObjectReference) []string {
